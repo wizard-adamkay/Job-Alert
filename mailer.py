@@ -10,7 +10,9 @@ smtp_server = "smtp.gmail.com"
 smtp_port = 465
 botPass = keyring.get_password("email_service", botEmail)
 
+
 class Mailer:
+
 	def sendEmail(self, jobs):
 		subject = "New Job Postings Detected"
 		body = "Jobs found:\n"
