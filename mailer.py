@@ -27,4 +27,3 @@ class Mailer:
 		with smtplib.SMTP_SSL(smtp_server, smtp_port, context=context) as server:
 			server.login(botEmail, botPass)
 			server.sendmail(botEmail, myEmail, msg.as_string())
-		print(f"Email sent to {myEmail} with new job postings.")

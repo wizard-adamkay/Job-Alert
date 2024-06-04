@@ -10,7 +10,6 @@ if __name__ == '__main__':
     newJobs = []
     for job in currentJobs:
         if job not in storedJobs:
-            print(f"{job} is a new job!!")
             newJobs.append(job)
     if newJobs:
         mailer = Mailer()
