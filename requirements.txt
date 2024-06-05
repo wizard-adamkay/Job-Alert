@@ -1,3 +1,5 @@
 requests~=2.32.3
 lxml~=5.2.2
 keyring~=25.2.1
+requests-html
+lxml[html_clean]
