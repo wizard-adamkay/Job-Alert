@@ -2,6 +2,7 @@ import requests
 from lxml import html, etree
 from job import Job
 from requests_html import HTMLSession
+from multiprocessing import Process, Queue
 
 imperva_url = "https://www.imperva.com/company/careers"
 enea_url = "https://careers.enea.com/jobs"
@@ -9,7 +10,7 @@ treyarch_url = "https://careers.treyarch.com/search-results?keywords=vancouver"
 
 
 class Scraper:
-	def getJobsImperva(self):
+	def getJobsImperva(self, queue):
 		r = requests.get(imperva_url)
 		tree = html.fromstring(r.content)
 		li = tree.xpath('//li[contains(@class, "position-item") and @data-city="vancouver"]')
@@ -21,9 +22,10 @@ class Scraper:
 				jobs.append(Job(title=title, link=link, company="Imperva"))
 			except IndexError:
 				continue
-		return jobs
+		for job in jobs:
+			queue.put(job)
 
-	def getJobsEnea(self):
+	def getJobsEnea(self, queue):
 		r = requests.get(enea_url)
 		tree = html.fromstring(r.content)
 		spans = tree.xpath("//span[contains(text(), 'Canada') or contains(text(), 'Vancouver')]")
@@ -36,9 +38,10 @@ class Scraper:
 				jobs.append(Job(title=title, link=link, company=company))
 			except IndexError:
 				continue
-		return jobs
+		for job in jobs:
+			queue.put(job)
 
-	def getJobsTreyarch(self):
+	def getJobsTreyarch(self, queue):
 		session = HTMLSession()
 		r = session.get(treyarch_url)
 		r.html.render()
@@ -55,10 +58,20 @@ class Scraper:
 				jobs.append(Job(title=title, link=link, company=company))
 			except IndexError:
 				continue
-		return jobs
+		for job in jobs:
+			queue.put(job)
 
 	def getAllJobs(self):
-		jobs = self.getJobsImperva()
-		jobs += self.getJobsEnea()
-		jobs += self.getJobsTreyarch()
-		return jobs
+		scrapers = [self.getJobsImperva, self.getJobsEnea, self.getJobsTreyarch]
+		processes = []
+		queue = Queue()
+		results = []
+		for scraper in scrapers:
+			process = Process(target=scraper, args=(queue, ))
+			processes.append(process)
+			process.start()
+		for process in processes:
+			process.join()
+		while not queue.empty():
+			results.append(queue.get())
+		return results
