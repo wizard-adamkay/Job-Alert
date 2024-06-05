@@ -9,7 +9,7 @@ Custom job alerts for companies that don't have a job alert function. Email's al
 4. Execute keyring.set_password("email_service", (bot gmail here), (bot gmail's access code))
 5. (optional) Swap the city and country within scraper.py to preferred job search location.
 6. Run the command "pip install -r requirements.txt"
-7. Navigate to pyppeteer's installation and change line 20 to __chromium_revision__ = '1263111'
+7. Navigate to pyppeteer's __init__ file and change line 20 to __chromium_revision__ = '1263111'
 8. Run using the command python3 main.py
 9. (optional) Set a Cron job or task scheduler to run hourly.
 
