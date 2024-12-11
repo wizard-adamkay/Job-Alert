@@ -1,5 +1,6 @@
 import requests
 import time
+import logging
 from lxml import html, etree
 from job import Job
 from requests_html import HTMLSession
@@ -19,14 +20,18 @@ class Scraper:
 	companies = ["Imperva", "Enea", "Treyarch", "MDA"]
 
 	def getHTML(self, url):
+		prevStatusCode = -1
 		for count in range(5):
 			response = requests.get(url)
-			if requests.status_codes == 200:
+			prevStatusCode = response.status_code
+			if response.status_code == 200:
 				return html.fromstring(response.content)
 			time.sleep(1)
-		raise CompanyUnreachableError(f"URL: {url} responded with status code: {requests.status_codes}")
+		logging.exception(f"URL: {url} responded with status code: {prevStatusCode}")
+		raise CompanyUnreachableError(f"URL: {url} responded with status code: {prevStatusCode}")
 
 	def extractJobs(self, postings, queue, company, titleXpath, linkXpath):
+		logging.info(f"starting extraction for {company}")
 		for posting in postings:
 			try:
 				title = posting.xpath(titleXpath)[0].strip()
@@ -36,6 +41,7 @@ class Scraper:
 				job = Job(title=title, link=link, company=company)
 				queue.put(job)
 			except IndexError as e:
+				logging.exception(f"index error encountered from {company}")
 				continue
 
 	def getJobsImperva(self, queue):
@@ -68,12 +74,18 @@ class Scraper:
 		try:
 			session = HTMLSession()
 			r = session.get(treyarch_url)
+			logging.info(f"Status code for Treyarch: {r.status_code}")
+			if r.status_code != 200:
+				raise CompanyUnreachableError(f"URL: {treyarch_url} responded with status code: {r.status_code}")
 			r.html.render()
 			tree = etree.HTML(r.html.html)
 		except CompanyUnreachableError as e:
+			logging.exception(f"URL: {treyarch_url} responded with status code: {r.status_code}")
 			self.companies.remove("Treyarch")
 			return
 		except Exception as e:
+			logging.exception(f"URL: {treyarch_url} had an exception")
+			self.companies.remove("Treyarch")
 			return
 		postings = tree.xpath("//li[contains(@class, 'jobs-list-item')]")
 		titleXPath = ".//div[contains(@class, 'job-title')]/span/text()"
@@ -84,12 +96,18 @@ class Scraper:
 		try:
 			session = HTMLSession()
 			r = session.get(mda_url)
+			logging.info(f"Status code for MDA: {r.status_code}")
+			if r.status_code != 200:
+				raise CompanyUnreachableError(f"URL: {mda_url} responded with status code: {r.status_code}")
 			r.html.render()
 			tree = etree.HTML(r.html.html)
 		except CompanyUnreachableError as e:
+			logging.exception(f"URL: {mda_url} responded with status code: {r.status_code}")
 			self.companies.remove("MDA")
 			return
 		except Exception as e:
+			logging.exception(f"URL: {mda_url} had an exception")
+			self.companies.remove("MDA")
 			return
 		postings = tree.xpath("//div[contains(@class, 'opportunity')]")
 		titleXPath = ".//h3/a[contains(@class, 'opportunity-link')]/text()"
@@ -109,4 +127,5 @@ class Scraper:
 		results = []
 		while not queue.empty():
 			results.append(queue.get())
+		logging.info("scraping completed")
 		return results
