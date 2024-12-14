@@ -1,39 +1,47 @@
+import multiprocessing
+
+from loggingConfig import listener_process, configure_logging
 from mailer import Mailer
 from db import DB
 from scraper import Scraper
 import logging
-from logging.handlers import RotatingFileHandler
 
 if __name__ == '__main__':
-    rotating_handler = RotatingFileHandler("app.log", maxBytes=5 * 1024 * 1024, backupCount=3)
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format="%(asctime)s - %(levelname)s - %(message)s",
-        handlers=[
-            rotating_handler,
-            logging.StreamHandler()
-        ]
-    )
-    logging.info("Run started")
+    logQueue = multiprocessing.Queue()
+    logFile = "C:\\Users\\adamk\\Desktop\\Code\\newJobDetector\\app.log"
+
+    # Starting the logger
+    listener = multiprocessing.Process(target=listener_process, args=(logQueue, logFile))
+    listener.start()
+
+    # Configure logging for the main process
+    configure_logging(logQueue)
+    logger = logging.getLogger(__name__)
+    logger.info("Main process started")
+    logger.debug("Debugging info from main process")
+
+
+    logger.info("Run started")
+
     db = DB()
-    scraper = Scraper()
+    scraper = Scraper(logQueue)
 
     # Put all new jobs into a list
     currentJobs = scraper.getAllJobs()
-    logging.info(f"Jobs found by scraper: {currentJobs}")
+    logger.info(f"Jobs found by scraper: {currentJobs}")
     oldStoredJobs = db.getAllStoredJobs()
-    logging.info(f"Jobs that were in the db: {oldStoredJobs}")
+    logger.info(f"Jobs that were in the db: {oldStoredJobs}")
     newJobs = []
     for currentJob in currentJobs:
         if currentJob not in oldStoredJobs:
             newJobs.append(currentJob)
-    logging.info(f"Jobs identified as new: {newJobs}")
+    logger.info(f"Jobs identified as new: {newJobs}")
 
     # purge the db of any job posting that have been taken down
     companiesReached = scraper.companies
-    logging.info(f"Companies included in purge: {companiesReached}")
+    logger.info(f"Companies included in purge: {', '.join(company.name for company in companiesReached)}")
     for company in companiesReached:
-        db.removeMissingJobsFromCompany(currentJobs, company)
+        db.removeMissingJobsFromCompany(currentJobs, company.name)
 
     # notify me if any new jobs are found
     if newJobs:
@@ -42,4 +50,8 @@ if __name__ == '__main__':
 
     db.storeNewJobs(newJobs)
 
-    logging.info(f"final list of jobs in db: {db.getAllStoredJobs()}")
+    logger.info(f"final list of jobs in db: {db.getAllStoredJobs()}")
+
+    # Stop the logger
+    logQueue.put(None)
+    listener.join()
