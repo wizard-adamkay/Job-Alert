@@ -5,7 +5,7 @@ from lxml import html, etree
 from company import Company
 from job import Job
 from requests_html import HTMLSession
-from multiprocessing import Process, Queue
+from multiprocessing import Process, Queue, Manager
 from companyUnreachableError import CompanyUnreachableError
 from loggingConfig import configure_logging
 
@@ -20,31 +20,33 @@ mda_url = (
 
 
 class Scraper:
-	companies = [
-		Company(
-			"Imperva", imperva_url, '//li[contains(@class, "position-item") and @data-city="vancouver"]',
-			".//span[contains(@class, 'job-title')]/text()", "./a/@href"
-		),
-		Company(
-			"Enea", enea_url, "//span[contains(text(), 'Canada') or contains(text(), 'Vancouver')]",
-			"../preceding-sibling::span/text()", "../../@href"
-		),
-		Company(
-			"Treyarch", treyarch_url, "//li[contains(@class, 'jobs-list-item')]",
-			".//div[contains(@class, 'job-title')]/span/text()",
-			".//div[contains(@class, 'information')]/a/@href",
-			type="session"
-		),
-		Company(
-			"MDA", mda_url, "//div[contains(@class, 'opportunity')]",
-			".//h3/a[contains(@class, 'opportunity-link')]/text()",
-			".//h3/a[contains(@class, 'opportunity-link')]/@href",
-			type="session", linkPrepend="https://recruiting.ultipro.ca"
-		)
-	]
-
 	def __init__(self, logQueue):
 		self.logQueue = logQueue
+		manager = Manager()
+		self.companies = manager.list(
+			[
+				Company(
+					"Imperva", imperva_url, '//li[contains(@class, "position-item") and @data-city="vancouver"]',
+					".//span[contains(@class, 'job-title')]/text()", "./a/@href"
+				),
+				Company(
+					"Enea", enea_url, "//span[contains(text(), 'Canada') or contains(text(), 'Vancouver')]",
+					"../preceding-sibling::span/text()", "../../@href"
+				),
+				Company(
+					"Treyarch", treyarch_url, "//li[contains(@class, 'jobs-list-item')]",
+					".//div[contains(@class, 'job-title')]/span/text()",
+					".//div[contains(@class, 'information')]/a/@href",
+					type="session"
+				),
+				Company(
+					"MDA", mda_url, "//div[contains(@class, 'opportunity')]",
+					".//h3/a[contains(@class, 'opportunity-link')]/text()",
+					".//h3/a[contains(@class, 'opportunity-link')]/@href",
+					type="session", linkPrepend="https://recruiting.ultipro.ca"
+				)
+			]
+		)
 
 	def getHTML(self, url, logger):
 		prevStatusCode = -1
@@ -56,6 +58,12 @@ class Scraper:
 			time.sleep(1)
 		logger.exception(f"URL: {url} responded with status code: {prevStatusCode}")
 		raise CompanyUnreachableError(f"URL: {url} responded with status code: {prevStatusCode}")
+
+	def remove_company(self, company):
+		try:
+			self.companies.remove(company)
+		except ValueError:
+			logging.warning(f"Company: {company.name} not found in the list during removal.")
 
 	def extractJobs(self, tree, queue, company, logger):
 		logger.info(f"starting extraction for {company.name}")
@@ -78,11 +86,11 @@ class Scraper:
 		try:
 			tree = self.getHTML(company.link, logger)
 		except CompanyUnreachableError as e:
-			self.companies.remove(company)
+			self.remove_company(company)
 			return
 		except Exception as e:
 			logger.exception(f"URL: {company.link} had an exception")
-			self.companies.remove(company)
+			self.remove_company(company)
 			return
 		self.extractJobs(tree, queue, company, logger)
 
@@ -99,11 +107,11 @@ class Scraper:
 			tree = etree.HTML(r.html.html)
 		except CompanyUnreachableError as e:
 			logging.exception(f"URL: {company.link} responded with status code: {r.status_code}")
-			self.companies.remove(company)
+			self.remove_company(company)
 			return
 		except Exception as e:
 			logging.exception(f"URL: {company.link} had an exception")
-			self.companies.remove(company)
+			self.remove_company(company)
 			return
 		self.extractJobs(tree, queue, company, logger)
 

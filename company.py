@@ -10,3 +10,6 @@ class Company:
         self.linkXPath = linkXPath
         self.type = type  # make this an enum later
         self.linkPrepend = linkPrepend
+
+    def __eq__(self, other):
+        return self.name == other.name and self.link == other.link
