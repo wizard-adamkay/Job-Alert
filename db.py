@@ -16,7 +16,7 @@ class DB:
 		conn = sqlite3.connect(db_name)
 		c = conn.cursor()
 		c.execute("SELECT title, link, company FROM jobs")
-		storedJobs = [Job(title=row[0], link=row[1], company=row[2]) for row in c.fetchall()]
+		storedJobs = set(Job(title=row[0], link=row[1], company=row[2]) for row in c.fetchall())
 		conn.close()
 		return storedJobs
 

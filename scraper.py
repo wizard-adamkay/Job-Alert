@@ -51,7 +51,7 @@ class Scraper:
 	def getHTML(self, url, logger):
 		prevStatusCode = -1
 		for count in range(5):
-			response = requests.get(url)
+			response = requests.get(url, timeout=5)
 			prevStatusCode = response.status_code
 			if response.status_code == 200:
 				return html.fromstring(response.content)
