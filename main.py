@@ -1,17 +1,16 @@
 import multiprocessing
-
+import logging
 from loggingConfig import listener_process, configure_logging
 from mailer import Mailer
 from db import DB
 from scraper import Scraper
-import logging
+
 
 if __name__ == '__main__':
     try:
+        # Starting the logger
         logQueue = multiprocessing.Queue()
         logFile = "C:\\Users\\adamk\\Desktop\\Code\\newJobDetector\\app.log"
-
-        # Starting the logger
         listener = multiprocessing.Process(target=listener_process, args=(logQueue, logFile))
         listener.start()
 
@@ -20,9 +19,6 @@ if __name__ == '__main__':
         logger = logging.getLogger(__name__)
         logger.info("Main process started")
         logger.debug("Debugging info from main process")
-
-
-        logger.info("Run started")
 
         db = DB()
         scraper = Scraper(logQueue)

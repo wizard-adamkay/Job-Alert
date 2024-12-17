@@ -125,8 +125,8 @@ class Scraper:
 			process.start()
 		for process in processes:
 			process.join()
-		results = []
+		results = set()
 		while not queue.empty():
-			results.append(queue.get())
+			results.add(queue.get())
 		logging.info("scraping completed")
 		return results
