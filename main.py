@@ -7,19 +7,20 @@ from scraper import Scraper
 
 
 if __name__ == '__main__':
+
+    # Starting the logger
+    logQueue = multiprocessing.Queue()
+    logFile = "C:\\Users\\adamk\\Desktop\\Code\\newJobDetector\\app.log"
+    listener = multiprocessing.Process(target=listener_process, args=(logQueue, logFile))
+    listener.start()
+
+    # Configure logging for the main process
+    configure_logging(logQueue)
+    logger = logging.getLogger(__name__)
+    logger.info("Main process started")
+    logger.debug("Debugging info from main process")
+
     try:
-        # Starting the logger
-        logQueue = multiprocessing.Queue()
-        logFile = "C:\\Users\\adamk\\Desktop\\Code\\newJobDetector\\app.log"
-        listener = multiprocessing.Process(target=listener_process, args=(logQueue, logFile))
-        listener.start()
-
-        # Configure logging for the main process
-        configure_logging(logQueue)
-        logger = logging.getLogger(__name__)
-        logger.info("Main process started")
-        logger.debug("Debugging info from main process")
-
         db = DB()
         scraper = Scraper(logQueue)
 
@@ -48,6 +49,8 @@ if __name__ == '__main__':
         db.storeNewJobs(newJobs)
 
         logger.info(f"final list of jobs in db: {db.getAllStoredJobs()}")
+    except Exception as e:
+        logger.exception(f"Exception occurred during run: {e}")
     finally:
         # Stop the logger
         logQueue.put(None)

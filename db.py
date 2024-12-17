@@ -8,7 +8,7 @@ db_name = "C:\\Users\\adamk\\Desktop\\Code\\newJobDetector\\jobs.db"
 
 
 class DB:
-	def __init__(self):
+	def __init__(self) -> None:
 		with sqlite3.connect(db_name) as conn:
 			c = conn.cursor()
 			c.execute('''CREATE TABLE IF NOT EXISTS jobs

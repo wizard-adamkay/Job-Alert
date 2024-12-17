@@ -1,3 +1,5 @@
+from typing import Set
+
 import requests
 import time
 import logging
@@ -8,6 +10,7 @@ from requests_html import HTMLSession
 from multiprocessing import Process, Queue, Manager
 from companyUnreachableError import CompanyUnreachableError
 from loggingConfig import configure_logging
+from lxml.etree import _Element as HtmlElement
 
 imperva_url = "https://www.imperva.com/company/careers"
 enea_url = "https://careers.enea.com/jobs"
@@ -20,7 +23,7 @@ mda_url = (
 
 
 class Scraper:
-	def __init__(self, logQueue):
+	def __init__(self, logQueue: Queue) -> None:
 		self.logQueue = logQueue
 		manager = Manager()
 		self.companies = manager.list(
@@ -48,7 +51,7 @@ class Scraper:
 			]
 		)
 
-	def getHTML(self, url, logger):
+	def getHTML(self, url: str, logger: logging.Logger) -> HtmlElement:
 		prevStatusCode = -1
 		for count in range(5):
 			response = requests.get(url, timeout=5)
@@ -59,13 +62,13 @@ class Scraper:
 		logger.exception(f"URL: {url} responded with status code: {prevStatusCode}")
 		raise CompanyUnreachableError(f"URL: {url} responded with status code: {prevStatusCode}")
 
-	def remove_company(self, company):
+	def remove_company(self, company: Company) -> None:
 		try:
 			self.companies.remove(company)
 		except ValueError:
 			logging.warning(f"Company: {company.name} not found in the list during removal.")
 
-	def extractJobs(self, tree, queue, company, logger):
+	def extractJobs(self, tree: HtmlElement, queue: Queue, company: Company, logger: logging.Logger) -> None:
 		logger.info(f"starting extraction for {company.name}")
 		postings = tree.xpath(company.postingsXPath)
 		for posting in postings:
@@ -80,7 +83,7 @@ class Scraper:
 				logger.exception(posting)
 				continue
 
-	def getJobs(self, queue, company, logQueue):
+	def getJobs(self, queue: Queue, company: Company, logQueue: Queue) -> None:
 		configure_logging(logQueue)
 		logger = logging.getLogger(__name__)
 		try:
@@ -94,7 +97,7 @@ class Scraper:
 			return
 		self.extractJobs(tree, queue, company, logger)
 
-	def getJobsSession(self, queue, company, logQueue):
+	def getJobsSession(self, queue: Queue, company: Company, logQueue: Queue) -> None:
 		configure_logging(logQueue)
 		logger = logging.getLogger(__name__)
 		try:
@@ -115,7 +118,7 @@ class Scraper:
 			return
 		self.extractJobs(tree, queue, company, logger)
 
-	def getAllJobs(self):
+	def getAllJobs(self) -> Set[Job]:
 		queue = Queue()
 		processes = []
 		for company in self.companies:

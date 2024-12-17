@@ -2,7 +2,11 @@ import os
 import smtplib
 import ssl
 from email.mime.text import MIMEText
+from typing import List
+
 import keyring
+
+from job import Job
 
 botEmail = os.getenv("BOTEMAIL")
 myEmail = os.getenv("MYEMAIL")
@@ -13,7 +17,7 @@ botPass = keyring.get_password("email_service", botEmail)
 
 class Mailer:
 
-	def sendEmail(self, jobs):
+	def sendEmail(self, jobs: List[Job]):
 		subject = "New Job Postings Detected"
 		body = "Jobs found:\n"
 		for job in jobs:
