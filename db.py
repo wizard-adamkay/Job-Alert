@@ -1,4 +1,5 @@
 import sqlite3
+from datetime import datetime
 from sqlite3 import Connection
 
 from job import Job
@@ -12,7 +13,7 @@ class DB:
 		with sqlite3.connect(db_name) as conn:
 			c = conn.cursor()
 			c.execute('''CREATE TABLE IF NOT EXISTS jobs
-		                         (id INTEGER PRIMARY KEY, title TEXT, link TEXT, company TEXT)''')
+		                         (id INTEGER PRIMARY KEY, title TEXT, link TEXT, company TEXT, last_seen TIMESTAMP)''')
 			conn.commit()
 
 	def getAllStoredJobs(self) -> Set[Job]:
@@ -41,8 +42,8 @@ class DB:
 		with sqlite3.connect(db_name) as conn:
 			c = conn.cursor()
 			for job in new_jobs:
-				c.execute("INSERT INTO jobs (title, link, company) VALUES (?, ?, ?)",
-						  (job.title, job.link, job.company))
+				c.execute("INSERT INTO jobs (title, link, company, last_seen) VALUES (?, ?, ?, ?)",
+						  (job.title, job.link, job.company, datetime.now()))
 			conn.commit()
 
 	# removes any job that is no longer posted by the company from the db
@@ -50,9 +51,24 @@ class DB:
 		with sqlite3.connect(db_name) as conn:
 			c = conn.cursor()
 			jobsInDB = self.getStoredJobsByCompany(companyName, conn)
+			now = datetime.now()
+
 			# if the job has been taken down from the site, remove it from db
 			for jobInDB in jobsInDB:
 				if jobInDB not in currentJobs:
-					c.execute("DELETE FROM jobs WHERE title = ? AND link = ? AND company = ?",
+					c.execute("SELECT last_seen FROM jobs WHERE title = ? AND link = ? AND company = ?",
 							  (jobInDB.title, jobInDB.link, jobInDB.company))
+					last_seen = c.fetchone()[0]
+					# remove if not seen in the last 24 hours
+					if (now - datetime.strptime(last_seen, '%Y-%m-%d %H:%M:%S')).total_seconds() > 24 * 3600:
+						c.execute("DELETE FROM jobs WHERE title = ? AND link = ? AND company = ?",
+								  (jobInDB.title, jobInDB.link, jobInDB.company))
+				conn.commit()
+
+	def refreshLastSeen(self, currentJobs: Set[Job]) -> None:
+		with sqlite3.connect(db_name) as conn:
+			c = conn.cursor()
+			for job in currentJobs:
+				c.execute("UPDATE jobs SET last_seen = ? WHERE title = ? AND link = ? AND company = ?",
+						  (datetime.now(), job.title, job.link, job.company))
 			conn.commit()

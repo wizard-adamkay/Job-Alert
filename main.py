@@ -26,14 +26,17 @@ if __name__ == '__main__':
 
         # Put all new jobs into a list
         currentJobs = scraper.getAllJobs()
-        logger.info(f"Jobs found by scraper: {currentJobs}")
+        logger.info(f"Jobs found by scraper: {', '.join(job.title + " " + job.company for job in currentJobs)}")
         oldStoredJobs = db.getAllStoredJobs()
-        logger.info(f"Jobs that were in the db: {oldStoredJobs}")
+        logger.info(f"Jobs that were in the db: {', '.join(job.title + " " + job.company for job in oldStoredJobs)}")
         newJobs = []
         for currentJob in currentJobs:
             if currentJob not in oldStoredJobs:
                 newJobs.append(currentJob)
-        logger.info(f"Jobs identified as new: {newJobs}")
+        logger.info(f"Jobs identified as new: {', '.join(job.title + " " + job.company for job in newJobs)}")
+
+        # refresh last_seen for each job found
+        db.refreshLastSeen(currentJobs)
 
         # purge the db of any job posting that have been taken down
         companiesReached = scraper.companies
@@ -48,7 +51,7 @@ if __name__ == '__main__':
 
         db.storeNewJobs(newJobs)
 
-        logger.info(f"final list of jobs in db: {db.getAllStoredJobs()}")
+        logger.info(f"final list of jobs in db: {', '.join(job.title + " " + job.company for job in db.getAllStoredJobs())}")
     except Exception as e:
         logger.exception(f"Exception occurred during run: {e}")
     finally:
