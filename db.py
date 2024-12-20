@@ -60,7 +60,7 @@ class DB:
 							  (jobInDB.title, jobInDB.link, jobInDB.company))
 					last_seen = c.fetchone()[0]
 					# remove if not seen in the last 24 hours
-					if (now - datetime.strptime(last_seen, '%Y-%m-%d %H:%M:%S')).total_seconds() > 24 * 3600:
+					if (now - datetime.strptime(last_seen, '%Y-%m-%d %H:%M:%S.%f')).total_seconds() > 24 * 3600:
 						c.execute("DELETE FROM jobs WHERE title = ? AND link = ? AND company = ?",
 								  (jobInDB.title, jobInDB.link, jobInDB.company))
 				conn.commit()
