@@ -1,5 +1,6 @@
 from typing import Set
 
+import lxml.html
 import requests
 import time
 import logging
@@ -80,6 +81,10 @@ class Scraper:
 				queue.put(job)
 			except IndexError as e:
 				logger.exception(f"index error encountered from {company}")
+				logger.exception(posting)
+				continue
+			except Exception as e:
+				logger.exception(f"error encountered from {company} : {e}")
 				logger.exception(posting)
 				continue
 
