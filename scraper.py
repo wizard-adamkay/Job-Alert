@@ -13,7 +13,7 @@ from mdaWorkaround import getMDAJobs
 from loggingConfig import configure_logging
 from lxml.etree import _Element as HtmlElement
 
-imperva_url = "https://www.imperva.com/company/careers"
+imperva_url = "https://careers.thalesgroup.com/global/en/search-results?keywords=vancouver"
 enea_url = "https://careers.enea.com/jobs"
 treyarch_url = "https://careers.treyarch.com/search-results?keywords=vancouver"
 mda_url = (
@@ -29,8 +29,9 @@ class Scraper:
 		self.companies = manager.list(
 			[
 				Company(
-					"Imperva", imperva_url, '//li[contains(@class, "position-item") and @data-city="vancouver"]',
-					".//span[contains(@class, 'job-title')]/text()", "./a/@href"
+					"Imperva", imperva_url, '//div[contains(@class, "au-target")]/div[contains(@class, "information")]',
+					".//div[contains(@class, 'job-title')]/span/text()", ".//a[contains(@class, 'au-target')]/@href",
+					type="session"
 				),
 				Company(
 					"Enea", enea_url, "//span[contains(text(), 'Canada') or contains(text(), 'Vancouver')]",
@@ -49,7 +50,7 @@ class Scraper:
 				# 	type="session", linkPrepend="https://recruiting.ultipro.ca"
 				# ),
 				Company(
-					"CadMakers", cadmakers_url, "//ul[contains(@class, 'whr-items')]",
+					"CadMakers", cadmakers_url, "//li[contains(@class, 'whr-item')]",
 					".//h3[contains(@class, 'whr-title')]/a/text()",
 					".//h3[contains(@class, 'whr-title')]/a/@href",
 					type="session"
