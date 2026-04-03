@@ -17,7 +17,9 @@ if __name__ == '__main__':
     # Configure logging for the main process
     configure_logging(logQueue)
     logger = logging.getLogger(__name__)
+    logger.info("=================================")
     logger.info("Main process started")
+    logger.info("=================================")
     logger.debug("Debugging info from main process")
 
     try:

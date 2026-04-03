@@ -1,6 +1,5 @@
 from typing import Set
 
-import lxml.html
 import requests
 import time
 import logging
@@ -10,6 +9,7 @@ from job import Job
 from requests_html import HTMLSession
 from multiprocessing import Process, Queue, Manager
 from companyUnreachableError import CompanyUnreachableError
+from mdaWorkaround import getMDAJobs
 from loggingConfig import configure_logging
 from lxml.etree import _Element as HtmlElement
 
@@ -17,10 +17,9 @@ imperva_url = "https://www.imperva.com/company/careers"
 enea_url = "https://careers.enea.com/jobs"
 treyarch_url = "https://careers.treyarch.com/search-results?keywords=vancouver"
 mda_url = (
-	"https://recruiting.ultipro.ca/MAC5000MCDW/JobBoard/664818ff-3594-4bec-9f30-3394e59e19f3/?q=&o"
-	"=postedDateDesc&w=&wc=&we=&wpst=&f4=-NP_8IhlXF-fGXIRSM9fNw&f5=zbdts05UEUmmM9J30HpRfg+r6Nk37SKbUicJ3G"
-	"-Ura_Tw"
+	"https://recruiting.ultipro.ca/MAC5000MCDW/JobBoard/664818ff-3594-4bec-9f30-3394e59e19f3/?q=&o=distance&w=Vancouver%2C+BC%2C+CAN&wc=-123.11335%2C49.261636&we=-123.27335%2C49.42163600000001%7C-122.95335%2C49.101636&wpst=2&f4=-NP_8IhlXF-fGXIRSM9fNw&f5=r6Nk37SKbUicJ3G-Ura_Tw+zbdts05UEUmmM9J30HpRfg+zhmbl8bqG02eEdHnn6_vDw"
 )
+cadmakers_url = "https://www.cadmakers.com/careers"
 
 
 class Scraper:
@@ -43,11 +42,17 @@ class Scraper:
 					".//div[contains(@class, 'information')]/a/@href",
 					type="session"
 				),
+				# Company(
+				# 	"MDA", mda_url, "//div[contains(@id, 'Opportunities')]",
+				# 	".//h3/a[contains(@class, 'opportunity-link')]/text()",
+				# 	".//h3/a[contains(@class, 'opportunity-link')]/@href",
+				# 	type="session", linkPrepend="https://recruiting.ultipro.ca"
+				# ),
 				Company(
-					"MDA", mda_url, "//div[contains(@class, 'opportunity')]",
-					".//h3/a[contains(@class, 'opportunity-link')]/text()",
-					".//h3/a[contains(@class, 'opportunity-link')]/@href",
-					type="session", linkPrepend="https://recruiting.ultipro.ca"
+					"CadMakers", cadmakers_url, "//ul[contains(@class, 'whr-items')]",
+					".//h3[contains(@class, 'whr-title')]/a/text()",
+					".//h3[contains(@class, 'whr-title')]/a/@href",
+					type="session"
 				)
 			]
 		)
@@ -80,11 +85,12 @@ class Scraper:
 				job = Job(title=title, link=link, company=company.name)
 				queue.put(job)
 			except IndexError as e:
-				logger.exception(f"index error encountered from {company}")
+				print(f"posting= {(etree.tostring(posting, pretty_print=True)).decode()}")
+				logger.exception(f"index error encountered from {company.name}")
 				logger.exception(posting)
 				continue
 			except Exception as e:
-				logger.exception(f"error encountered from {company} : {e}")
+				logger.exception(f"error encountered from {company.name} : {e}")
 				logger.exception(posting)
 				continue
 
@@ -131,6 +137,13 @@ class Scraper:
 			process = Process(target=target, args=(queue, company, self.logQueue))
 			processes.append(process)
 			process.start()
+		# workaround for MDASpace verification
+		try:
+			process = Process(target=getMDAJobs, args=(queue, self.logQueue))
+			processes.append(process)
+			process.start()
+		except Exception as e:
+			logging.exception(f"Something is wrong with MDA again: {e}")
 		for process in processes:
 			process.join()
 		results = set()
