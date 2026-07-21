@@ -20,6 +20,7 @@ mda_url = (
 	"https://recruiting.ultipro.ca/MAC5000MCDW/JobBoard/664818ff-3594-4bec-9f30-3394e59e19f3/?q=&o=distance&w=Vancouver%2C+BC%2C+CAN&wc=-123.11335%2C49.261636&we=-123.27335%2C49.42163600000001%7C-122.95335%2C49.101636&wpst=2&f4=-NP_8IhlXF-fGXIRSM9fNw&f5=r6Nk37SKbUicJ3G-Ura_Tw+zbdts05UEUmmM9J30HpRfg+zhmbl8bqG02eEdHnn6_vDw"
 )
 cadmakers_url = "https://www.cadmakers.com/careers"
+zaber_url = "https://www.zaber.com/careers/jobs"
 
 
 class Scraper:
@@ -53,6 +54,13 @@ class Scraper:
 					"CadMakers", cadmakers_url, "//li[contains(@class, 'whr-item')]",
 					".//h3[contains(@class, 'whr-title')]/a/text()",
 					".//h3[contains(@class, 'whr-title')]/a/@href",
+					type="session"
+				),
+				Company(
+					"Zaber", zaber_url, "//a[contains(@class, 'job-boxed')]",
+					".//h3/text()",
+					"./@href",
+					linkPrepend="https://www.zaber.com",
 					type="session"
 				)
 			]
